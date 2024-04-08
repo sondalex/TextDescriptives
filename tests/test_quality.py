@@ -14,6 +14,9 @@ from textdescriptives.components.quality import (
     oov_ratio,
     proportion_bullet_points,
     proportion_ellipsis,
+    span_ngrams,
+    span_ngrams_fast,
+    span_ngrams_optimized,
     symbol_to_word_ratio,
     top_ngram_chr_fraction,
 )
@@ -149,6 +152,85 @@ def test_duplicate_ngram_chr_fraction(
     assert d, "duplicate_ngram_fraction should not be empty"
     for i, j in zip(d, duplicate_ngram):  # , strict=True): # for python >3.10
         assert abs(d[i] - j) < 0.01
+
+
+def test_span_ngrams(nlp):
+    text = "This is a test."
+    doc = nlp(text)
+    span = doc[0:]
+    result = span_ngrams(span, (2, 3))
+    expected = {
+        2: {
+            "This is": {"count": 1, "span": [span[0:2]]},
+            "is a": {"count": 1, "span": [span[1:3]]},
+            "a test": {"count": 1, "span": [span[2:4]]},
+            "test.": {"count": 1, "span": [span[3:]]},
+        },
+        3: {
+            "This is a": {"count": 1, "span": [span[0:3]]},
+            "is a test": {"count": 1, "span": [span[1:-1]]},
+            "a test.": {"count": 1, "span": [span[2:]]},
+        },
+    }
+    result[2] = dict(result[2])
+    result[3] = dict(result[3])
+    assert dict(result) == expected
+
+
+import time
+
+
+def test_span_ngrams_fast(nlp):
+    text = "This is a test."
+    doc = nlp(text)
+    span = doc[0:]
+    result = span_ngrams_fast(span, (2, 3))
+
+    expected = {
+        2: {
+            "This is": {"count": 1, "span": [span[0:2]]},
+            "is a": {"count": 1, "span": [span[1:3]]},
+            "a test": {"count": 1, "span": [span[2:4]]},
+            "test.": {"count": 1, "span": [span[3:]]},
+        },
+        3: {
+            "This is a": {"count": 1, "span": [span[0:3]]},
+            "is a test": {"count": 1, "span": [span[1:-1]]},
+            "a test.": {"count": 1, "span": [span[2:]]},
+        },
+    }
+    result[2] = dict(result[2])
+    result[3] = dict(result[3])
+
+    assert dict(result) == expected
+
+
+def test_span_ngrams_optimized(nlp):
+    text = "This is a test."
+    doc = nlp(text)
+    span = doc[0:]
+    result = span_ngrams_optimized(span, (2, 3))
+
+    expected = {
+        2: {
+            "This is": {"count": 1, "span": [span[0:2]]},
+            "is a": {"count": 1, "span": [span[1:3]]},
+            "a test": {"count": 1, "span": [span[2:4]]},
+            "test.": {"count": 1, "span": [span[3:]]},
+        },
+        3: {
+            "This is a": {"count": 1, "span": [span[0:3]]},
+            "is a test": {"count": 1, "span": [span[1:-1]]},
+            "a test.": {"count": 1, "span": [span[2:]]},
+        },
+    }
+    result[2] = dict(result[2])
+    result[3] = dict(result[3])
+
+    assert dict(result) == expected
+
+
+# {: defaultdict(<function span_ngrams.<locals>.<dictcomp>.<lambda> at 0x7fe8841af100>, {}
 
 
 # test top ngram chr fraction

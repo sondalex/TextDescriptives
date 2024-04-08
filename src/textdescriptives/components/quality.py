@@ -224,7 +224,7 @@ def span_ngrams(
         n: defaultdict(lambda: {"count": 0, "span": []})
         for n in range(lower, upper + 1)
     }
-    for i, _ in enumerate(span):
+    for i in range(len(span)):
         for ngram_size in range(lower, upper + 1):
             end = i + ngram_size
             if not end > max_len:
@@ -235,6 +235,77 @@ def span_ngrams(
                     ngram_span,
                 )
     return shingles_count  # type: ignore
+
+
+def span_ngrams_fast(
+    span: Union[Span, Doc],
+    ngram_range: Tuple[int, int],
+) -> Dict[int, Dict[str, Union[int, List[Span]]]]:
+    """Calculates the counts of n-grams in the specified range.
+
+    Args:
+        span (Union[Span, Doc]): A spaCy Span or Doc object.
+        ngram_range (Tuple[int, int]): The n-gram range.
+
+    Returns:
+        Dict[int, Dict[str, Union[int, List[Span]]]]: A dictionary that for each n in
+            the ngram range contains the counts of the n-grams as well as the spans of
+            the n-grams.
+    """
+    max_len = len(span)
+    lower, upper = ngram_range
+    shingles_count = {n: {} for n in range(lower, upper + 1)}
+    for i in range(len(span)):
+        for ngram_size in range(lower, upper + 1):
+            end = i + ngram_size
+            if end <= max_len:
+                ngram_span = span[i:end]
+                ngram = ngram_span.text
+                if ngram not in shingles_count[ngram_size]:
+                    shingles_count[ngram_size].update({ngram: {"count": 0, "span": []}})
+                shingles_count[ngram_size][ngram]["count"] += 1
+                shingles_count[ngram_size][ngram]["span"].append(
+                    ngram_span,
+                )
+
+    return shingles_count
+
+
+def _span_ngrams_opt(span: Union[Span, Doc], lower, upper):
+    max_len = len(span)
+    for i in range(len(span)):
+        for ngram_size in range(lower, upper + 1):
+            end = i + ngram_size
+            if end <= max_len:
+                ngram_span = span[i:end]
+                ngram_size = end - i
+                yield (ngram_size, ngram_span)
+
+
+def span_ngrams_optimized(span, ngram_range):
+    """Calculates the counts of n-grams in the specified range.
+
+    Args:
+        span (Union[Span, Doc]): A spaCy Span or Doc object.
+        ngram_range (Tuple[int, int]): The n-gram range.
+
+    Returns:
+        Dict[int, Dict[str, Union[int, List[Span]]]]: A dictionary that for each n in
+            the ngram range contains the counts of the n-grams as well as the spans of
+            the n-grams.
+    """
+
+    lower, upper = ngram_range
+    shingles_count = {n: {} for n in range(lower, upper + 1)}
+    for ngram_size, ngram_span in _span_ngrams_opt(span, lower, upper):
+        ngram = ngram_span.text
+        if ngram not in shingles_count[ngram_size]:
+            shingles_count[ngram_size].update({ngram: {"count": 0, "span": []}})
+        shingles_count[ngram_size][ngram]["count"] += 1
+        shingles_count[ngram_size][ngram]["span"].append(
+            ngram_span,
+        )
+    return shingles_count
 
 
 def duplicate_ngram_fraction(
@@ -257,7 +328,7 @@ def duplicate_ngram_fraction(
     chr_len = len(span.text)
     if chr_len == 0:
         return {n: 0.0 for n in range(ngram_range[0], ngram_range[1] + 1)}
-    shingles_count = span_ngrams(span, ngram_range)
+    shingles_count = span_ngrams_optimized(span, ngram_range)
     duplicate_chr_fraction = {}
     for ngram_size, ngrams in shingles_count.items():
         # create a boolean array of the same length as the text
@@ -301,7 +372,7 @@ def top_ngram_chr_fraction(
     if chr_len == 0:
         return {n: 0.0 for n in range(ngram_range[0], ngram_range[1] + 1)}
 
-    ngram_counter = span_ngrams(span, ngram_range=ngram_range)
+    ngram_counter = span_ngrams_optimized(span, ngram_range=ngram_range)
     top_ngram_chr_frac = {}
     for n in ngram_counter:
         # find the top n-gram
