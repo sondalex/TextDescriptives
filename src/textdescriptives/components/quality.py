@@ -264,15 +264,20 @@ def duplicate_ngram_fraction(
         # where True indicates that the token is a duplicate
         is_duplicate = np.zeros(max_len, dtype=bool)
         # set duplicate tokens to True
+        print("Spans of ngrams with count higher than 1:")
         for ngram, count in ngrams.items():
             if count["count"] > 1:  # type: ignore
                 for ngram_span in count["span"]:  # type: ignore
+                    print(ngram_span)
                     is_duplicate[ngram_span.start : ngram_span.end] = True
 
         duplicate_chars = 0
         # get duplicate ranges from boolean array
+        print("\n-------------------\n")
+        print("Spans tagged as duplicates:")
         for start, end in get_ranges(is_duplicate):
             _span = span[start:end]
+            print(f"range=({start}, {end}), span={_span}")
             duplicate_chars += _span.end_char - _span.start_char
         duplicate_chr_fraction[ngram_size] = duplicate_chars / chr_len
     return duplicate_chr_fraction
