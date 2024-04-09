@@ -253,27 +253,18 @@ def duplicate_ngram_fraction(
         Dict[int, float]: the fraction of duplicate characters for each
             n-gram size
     """
-    max_len = len(span)
     chr_len = len(span.text)
     if chr_len == 0:
         return {n: 0.0 for n in range(ngram_range[0], ngram_range[1] + 1)}
     shingles_count = span_ngrams(span, ngram_range)
     duplicate_chr_fraction = {}
     for ngram_size, ngrams in shingles_count.items():
-        # create a boolean array of the same length as the text
-        # where True indicates that the token is a duplicate
-        is_duplicate = np.zeros(max_len, dtype=bool)
-        # set duplicate tokens to True
-        for ngram, count in ngrams.items():
-            if count["count"] > 1:  # type: ignore
-                for ngram_span in count["span"]:  # type: ignore
-                    is_duplicate[ngram_span.start : ngram_span.end] = True
-
         duplicate_chars = 0
-        # get duplicate ranges from boolean array
-        for start, end in get_ranges(is_duplicate):
-            _span = span[start:end]
-            duplicate_chars += _span.end_char - _span.start_char
+        for ngram, count in ngrams.items():
+            if count["count"] > 1:
+                for ngram_span in count["span"]:
+                    duplicate_chars += ngram_span.end_char - ngram_span.start_char
+
         duplicate_chr_fraction[ngram_size] = duplicate_chars / chr_len
     return duplicate_chr_fraction
 
