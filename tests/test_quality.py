@@ -151,6 +151,16 @@ def test_duplicate_ngram_chr_fraction(
         assert abs(d[i] - j) < 0.01
 
 
+def test_duplicate_ngram_fraction(nlp):
+    text = "This is a test. This is another test."
+    doc = nlp(text)
+    span = doc[0:]
+    result = duplicate_ngram_fraction(span, (2, 3))
+
+    expected = {2: (len("This is") * 2 + len("test.") * 2) / len(span.text), 3: 0}
+    assert result == expected
+
+
 # test top ngram chr fraction
 @pytest.mark.parametrize(
     "text, top_ngram_chr_frac, ngram_range",
